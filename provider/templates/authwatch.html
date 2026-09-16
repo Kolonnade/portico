@@ -1,0 +1,30 @@
+{{define "auth-watch"}}<script>
+// Re-checks sign-in whenever this tab comes back into view. Signing in or out
+// usually happens in another tab, and nothing tells an open page, so it asks
+// the server again and lets the page decide what changed. The account is named
+// explicitly: with several signed in, the server never guesses which one a page
+// means.
+function watchAuth(opts) {
+  let checking = false, last = 0;
+  const query = (opts.account === undefined || opts.account === null) ? '' : '?account=' + encodeURIComponent(opts.account);
+  async function check() {
+    if (document.visibilityState !== 'visible' || checking || Date.now() - last < 2000) return;
+    checking = true; last = Date.now();
+    try {
+      const r = await fetch('/accounts/v1/session' + query, {
+        cache: 'no-store', headers: { 'Accounts-Protocol-Version': '1.0' },
+      });
+      if (r.status === 401) { if (opts.signedOut) opts.signedOut(); return; }
+      if (r.ok && opts.signedIn) opts.signedIn(await r.json());
+    } catch (e) {
+      // Offline or mid-deploy: check again the next time the tab is shown.
+    } finally {
+      checking = false;
+    }
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  // A page restored from the back/forward cache runs no scripts on load.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) { last = 0; check(); } });
+}
+</script>{{end}}

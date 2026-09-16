@@ -1,0 +1,17 @@
+{{define "passkey-signal"}}<script>
+// Tells the passkey provider the account's current name, so a saved passkey is
+// labeled with the profile name rather than whatever it was created with.
+// The Signal API is feature-detected: where it is missing nothing happens, and
+// the next visit from a browser that has it catches up.
+async function signalPasskeyDetails(s) {
+  if (!s || !s.name || !s.user_ids || !s.user_ids.length) return;
+  if (!window.PublicKeyCredential || !PublicKeyCredential.signalCurrentUserDetails) return;
+  for (const userId of s.user_ids) {
+    try {
+      await PublicKeyCredential.signalCurrentUserDetails({
+        rpId: s.rp_id, userId, name: s.name, displayName: s.name,
+      });
+    } catch (e) { /* best effort; the provider may not hold this handle */ }
+  }
+}
+</script>{{end}}

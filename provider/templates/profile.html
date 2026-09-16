@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile — {{.ServiceName}}</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 28rem; margin: 4rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.4rem; }
+  label, legend { font-weight: 600; }
+  input[type=text], button { font: inherit; width: 100%; padding: .6rem .7rem; margin-top: .5rem;
+                             border-radius: .4rem; border: 1px solid currentColor; box-sizing: border-box; }
+  button { cursor: pointer; }
+  fieldset { border: 0; padding: 0; margin: 1.5rem 0 0; }
+  .avatars { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; margin-top: .5rem; }
+  .tile { position: relative; }
+  .tile input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .tile span { display: block; text-align: center; font-size: 2.6rem; line-height: 1.4;
+               border: 2px solid transparent; border-radius: .6rem; }
+  .tile input:checked + span { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
+  .tile input:focus-visible + span { outline: 2px solid Highlight; outline-offset: 2px; }
+  .msg { margin-top: 1rem; min-height: 1.5rem; }
+  .muted { opacity: .7; font-size: .9rem; }
+</style>
+
+<h1>Your profile</h1>
+
+<form id="profile">
+  <label for="name">Display name</label>
+  <input id="name" type="text" maxlength="{{.MaxNameLen}}" value="{{.DisplayName}}"
+         autocomplete="nickname" required>
+  <p class="muted">Shown on your account and as the name of your passkey.</p>
+
+  <fieldset>
+    <legend>Avatar</legend>
+    <div class="avatars">
+      {{range .Avatars}}
+      <label class="tile">
+        <input type="radio" name="avatar" value="{{.Key}}" aria-label="{{.Label}}" {{if eq .Key $.Avatar}}checked{{end}}>
+        <span aria-hidden="true">{{.Emoji}}</span>
+      </label>
+      {{end}}
+    </div>
+  </fieldset>
+
+  <button type="submit">Save</button>
+  <p class="msg" id="msg" role="status"></p>
+  <p class="muted"><a href="/u/{{.Account}}/">Back</a></p>
+</form>
+
+{{template "passkey-signal"}}
+<script>
+const ACCOUNT = {{.Account}};
+const SIGNAL = {{.Signal}};
+const form = document.getElementById('profile');
+const msg = t => document.getElementById('msg').textContent = t;
+
+form.onsubmit = async e => {
+  e.preventDefault();
+  const avatar = form.querySelector('input[name=avatar]:checked');
+  if (!avatar) { msg('Choose an avatar.'); return; }
+  msg('Saving…');
+  const r = await fetch('/accounts/v1/profile', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account: ACCOUNT, display_name: document.getElementById('name').value, avatar: avatar.value }),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) { msg(out.error_description || 'Could not save your profile.'); return; }
+  await signalPasskeyDetails(SIGNAL && { ...SIGNAL, name: out.display_name });
+  window.location = '/u/' + ACCOUNT + '/';
+};
+</script>
+
+{{template "auth-watch"}}
+<script>
+watchAuth({
+  account: ACCOUNT,
+  signedOut: () => location.replace('/'),
+  signedIn: (s) => { if (s.sid !== {{.SID}}) location.reload(); },
+});
+</script>

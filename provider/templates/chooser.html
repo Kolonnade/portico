@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{if eq .Mode "choose"}}Choose an account{{else if eq .Mode "stale"}}Account not signed in{{else}}{{.Title}}{{end}} — {{.ServiceName}}</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 24rem; margin: 4rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .muted { opacity: .7; font-size: .9rem; }
+  .list { list-style: none; padding: 0; margin: 1.5rem 0; }
+  .list li { margin: .5rem 0; }
+  .acct { display: flex; gap: .6rem; align-items: center; width: 100%; font: inherit; text-align: left;
+          padding: .7rem; border-radius: .4rem; border: 1px solid currentColor; background: none;
+          color: inherit; cursor: pointer; text-decoration: none; box-sizing: border-box; }
+  .emoji { font-size: 1.6rem; }
+</style>
+
+{{if eq .Mode "choose"}}
+<h1>Choose an account</h1>
+<p class="muted">to continue to {{.ClientName}}</p>
+<ul class="list">
+  {{range .Accounts}}
+  <li>
+    <form method="post" action="/login/select">
+      <input type="hidden" name="authRequestID" value="{{$.AuthRequestID}}">
+      <input type="hidden" name="account" value="{{.Ordinal}}">
+      <button class="acct">
+        <span class="emoji" aria-hidden="true">{{.Emoji}}</span>
+        <span>{{if .Name}}{{.Name}}{{else}}Account {{.Ordinal}}{{end}}</span>
+        {{if .Default}}<span class="muted">default</span>{{end}}
+      </button>
+    </form>
+  </li>
+  {{end}}
+</ul>
+<p><a href="/signin?authRequestID={{.AuthRequestID}}">Use another account</a></p>
+
+{{else if eq .Mode "stale"}}
+<h1>That account isn't signed in here</h1>
+<p class="muted">The link names an account this browser doesn't hold — perhaps it was signed out. Choose one that is, rather than landing in the wrong one.</p>
+{{if .Accounts}}
+<ul class="list">
+  {{range .Accounts}}
+  <li><a class="acct" href="/u/{{.Ordinal}}/">
+    <span class="emoji" aria-hidden="true">{{.Emoji}}</span>
+    <span>{{if .Name}}{{.Name}}{{else}}Account {{.Ordinal}}{{end}}</span>
+  </a></li>
+  {{end}}
+</ul>
+{{end}}
+<p><a href="/signin?add=1">Sign in to another account</a></p>
+
+{{else}}
+<h1>{{.Title}}</h1>
+<p>{{.Body}}</p>
+{{end}}
