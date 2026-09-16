@@ -20,6 +20,13 @@ Go and PostgreSQL, built on [`zitadel/oidc`](https://github.com/zitadel/oidc) so
 
 Portico answers *who is this person*. It never answers *what may they do* — no roles, no permissions, no admin flags in the provider or in its tokens. Authorization belongs to your application, which is the only thing that knows what its own data means.
 
+## Documentation
+
+Written ahead of the code, so the implementation has something to be checked against:
+
+- [Opinions](docs/opinions.md) — the positions that shape the API
+- [Several signed-in accounts](docs/multiple-accounts.md) — the session model, and how sites, single-page apps and native apps each say which account they mean
+
 ## When there is something to use
 
 ```
