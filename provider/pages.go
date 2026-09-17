@@ -139,6 +139,8 @@ func (p *Pages) Home(w http.ResponseWriter, r *http.Request) {
 		"CanAdd":      len(list) < maxAccounts,
 		"Sites":       sites,
 		"Signal":      signal,
+		// The profile version gates the passkey rename signal to once per change.
+		"ProfileVersion": a.User.ProfileUpdatedAt,
 	})
 }
 

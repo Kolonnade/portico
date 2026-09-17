@@ -14,4 +14,19 @@ async function signalPasskeyDetails(s) {
     } catch (e) { /* best effort; the provider may not hold this handle */ }
   }
 }
+
+// signalPasskeyDetailsOnce signals a name only when this browser has not already
+// signaled it for this profile version. The provider shows a notification for
+// every call, name changed or not, so signaling on every page load nags. A
+// browser that has never signaled still catches up once — which is what makes a
+// name saved elsewhere reach this browser's provider — and then stays quiet.
+// Without storage it does nothing: the save itself already signaled.
+async function signalPasskeyDetailsOnce(s, version) {
+  if (!s || !s.name || !s.user_ids || !s.user_ids.length || !version) return;
+  const key = 'portico.passkey-signal.' + s.rp_id + '.' + s.user_ids.join('.');
+  const stamp = version + ':' + s.name;
+  try { if (localStorage.getItem(key) === stamp) return; } catch (e) { return; }
+  await signalPasskeyDetails(s);
+  try { localStorage.setItem(key, stamp); } catch (e) { /* nothing to remember with */ }
+}
 </script>{{end}}

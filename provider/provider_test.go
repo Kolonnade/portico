@@ -14,7 +14,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -860,5 +862,45 @@ func TestSessionEndpointNamesTheAccount(t *testing.T) {
 	}
 	if missing := h.get("/accounts/v1/session?account=9"); missing.StatusCode != http.StatusUnauthorized {
 		t.Errorf("an account this browser doesn't hold: %d", missing.StatusCode)
+	}
+}
+
+// The home page asks the passkey provider to rename a passkey once per profile
+// version, not on every load: the provider shows a notification for each call.
+func TestHomeSignalsPasskeyNameOncePerVersion(t *testing.T) {
+	h := newHarness(t)
+	h.register("signal@example.com")
+	h.post("/accounts/v1/profile", map[string]any{"account": 0, "display_name": "Owl Person", "avatar": "owl"}).Body.Close()
+
+	resp := h.get("/u/0/")
+	page := bodyString(t, resp)
+	if strings.Contains(page, "signalPasskeyDetails({") {
+		t.Fatal("the home page signals the passkey name unconditionally on every load")
+	}
+	var version int64
+	if err := h.db.Pool().QueryRow(context.Background(), `SELECT profile_updated_at FROM users LIMIT 1`).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`signalPasskeyDetailsOnce\(\{.*\},\s*` + strconv.FormatInt(version, 10) + `\s*\)`).MatchString(page) {
+		t.Fatalf("the home page does not gate the signal on profile version %d", version)
+	}
+	if os.Getenv("NODE_CHECK") != "" {
+		checkScripts(t, page)
+	}
+}
+
+// checkScripts syntax-checks every inline script with node, when asked to.
+func checkScripts(t *testing.T, page string) {
+	t.Helper()
+	for i, m := range regexp.MustCompile(`(?s)<script>(.*?)</script>`).FindAllStringSubmatch(page, -1) {
+		f, err := os.CreateTemp(t.TempDir(), "script-*.js")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = f.WriteString(m[1])
+		f.Close()
+		if out, err := exec.Command("node", "--check", f.Name()).CombinedOutput(); err != nil {
+			t.Errorf("script %d does not parse: %v\n%s", i, err, out)
+		}
 	}
 }

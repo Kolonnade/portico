@@ -65,7 +65,8 @@ form.onsubmit = async e => {
   });
   const out = await r.json().catch(() => ({}));
   if (!r.ok) { msg(out.error_description || 'Could not save your profile.'); return; }
-  await signalPasskeyDetails(SIGNAL && { ...SIGNAL, name: out.display_name });
+  // Records the new version too, so the home page this navigates to stays quiet.
+  await signalPasskeyDetailsOnce(SIGNAL && { ...SIGNAL, name: out.display_name }, out.profile_version);
   window.location = '/u/' + ACCOUNT + '/';
 };
 </script>

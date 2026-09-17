@@ -66,7 +66,7 @@
 </div>
 
 {{template "passkey-signal"}}
-<script>signalPasskeyDetails({{.Signal}});</script>
+<script>signalPasskeyDetailsOnce({{.Signal}}, {{.ProfileVersion}});</script>
 
 {{template "auth-watch"}}
 <script>
